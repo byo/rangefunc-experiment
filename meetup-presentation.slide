@@ -1,0 +1,322 @@
+# Rangefunc experiment in Go 1.22
+20 Feb 2024
+Tags: rangefunc, experiment
+Summary: A short presentation exploring rangefunc experiment added in Go 1.22
+
+Bartłomiej Święcki
+Backend Developer (behind-the-scenes squad) at Sonatus
+b.swiecki@gmail.com
+@byospoon
+https://www.linkedin.com/in/bswiecki/
+https://github.com/byo
+https://blog.bswiecki.dev
+https://blog.cinodenet.org
+https://www.sonatus.com/
+
+## About me
+
+Hiding behind the scenes as a backend dev for some time now.
+
+> *Indeed, I'm sufficiently seasoned to have been jokingly nicknamed 'grandpa' at a previous position*
+
+: but not that old to have gray hair ;)
+: Working with backend-side code, various code, web pages, data processing, databases...
+
+Multilingual:
+    Assembler, C, C++, PHP, SQL, JavaScript, Python, Go
+    (no Java, sorry)
+
+> *Learning new language brings a new perspective, helps using other languages better.*
+
+I've been in love with Go since its beta versions...
+
+: That was around the beta version 0.7, if I recall correctly.
+
+ ... and using it as my primary language now.
+
+: almost exclusively now, up to the point where it's sometimes hard to write in other languages.
+
+> It's been 7 years since I wrote my first Go code used in production.
+
+## Love Go, but...
+
+## Jealous of: generators in python,
+
+.code -numbers presentationcode/python.py
+
+```text
+Outputs:
+5
+4
+3
+2
+1
+```
+
+* Execution flow jumps between coroutine and the main flow
+* There is no memory overhead because the process is entirely managed within the execution flow.
+
+: It's like the execution of the code in generator overlaps with the for loop
+:  1. Run the generator up to the yield call
+:  2. Run the print in the for loop
+:  3. Go back to the generator, execute it until the next yield
+
+## generator expressions (also python),
+
+.code -numbers presentationcode/python2.py /^transformed/,
+
+```text
+Output:
+<class 'generator'>
+100
+64
+36
+16
+4
+```
+
+* Very expressive syntax
+* Still no memory overhead
+
+## ranges in C++,
+
+.code -numbers presentationcode/cpp.cpp /main\(/,/^}/
+
+```text
+Outputs:
+0
+4
+16
+36
+64
+```
+
+* Very clean and composable syntax, similar to Unix pipes
+* All calculated in-place, no memory overhead
+
+: Easy to use pipeline-style data processing
+: Transformations applied in memory on-the-fly
+
+## functional-style processing in Rust
+
+.code -numbers presentationcode/rust.rs
+
+```text
+Output:
+BODY!
+```
+
+* Similar pattern - no raw loops
+* Composable transformations
+
+: Functional style programming is less exposed to bugs caused by typos in loops
+: evaluation on the fly
+: easy chaining, just like Unix pipes
+
+## Can we have something similar in Go?
+
+<https://github.com/samber/lo> - functional style programming in Go.
+
+.code -numbers presentationcode/samberlo/main.go /^func main/,
+
+* Steps are executed sequentially
+* Arrays used to store intermediate results
+* Can not break calculations in the middle (give up after n elements)
+
+## How about channels?
+
+.code -numbers presentationcode/channels/main.go /^func main/,/SPLIT-POINT/
+
+## How about channels (continued)?
+
+.code -numbers presentationcode/channels/main.go /SPLIT-POINT/,
+
+* Not so straightforward - doesn't fit in one slide ;)
+* Who controls goroutine termination?
+
+## Rangefunc experiment
+
+Introduced in [Go 1.22](https://go.dev/doc/go1.22):
+
+> Go 1.22 includes a preview of a language change we are considering for a future version of Go: [range-over-function iterators](https://go.dev/wiki/RangefuncExperiment). Building with `GOEXPERIMENT=rangefunc` enables this feature.
+
+: The main topic of today's presentation.
+
+From the rangefunc's Wiki:
+
+> We invite **anyone** who wants to help us understand the effects of the change to try using `GOEXPERIMENT=rangefunc` and **let us know** about any problems or successes encountered.
+
+: We're invited to look at it and give back some comments - meetup would be a good place to take a look at that feature.
+
+## Basic example
+
+.code -numbers 01-startup/main.go
+
+Execute with:
+
+```bash
+export GOEXPERIMENT=rangefunc go run .
+```
+
+## Infinite generator + break
+
+.code -numbers 02-break/main.go  /^func iota/,
+
+## Parametrized generator
+
+.code -numbers 02-break/main.go  /^func iota/,/^}/
+
+extended to:
+
+.code -numbers 03-multtable/main.go  /^func iota/,/^}/
+
+## Multiplication table
+
+.code -numbers 03-multtable/main.go  /^func iota/,
+
+## Chaining generators - transform
+
+.code -numbers 04-transform-filter/main.go /func transform/,/^}/
+
+*No godoc yet for **`iter`** package, source code to the rescue:*
+*<https://github.com/golang/go/blob/go1.22.0/src/iter/iter.go>*
+
+## Chaining generators - filter
+
+.code -numbers 04-transform-filter/main.go /func filter/,/^}/
+
+*Hope to see such tools in stdlib.*
+
+## Chaining generators - helpers
+
+.code -numbers 04-transform-filter/main.go /HELPERS START/,/HELPERS END/
+
+## Chaining generators - combining together
+
+.code -numbers 04-transform-filter/main.go /func main/,/^}/
+
+Jay: we've got all calculated in memory!
+
+Nay: the code is not pretty
+
+## Simplifying chaining code - first attempt
+
+New **`combinable`** wrapper type:
+
+.code -numbers 05-combine-attempt-1/main.go /type combinable/
+
+Iota and all transformations return **``combinable``**:
+
+.code -numbers 05-combine-attempt-1/main.go /func iota/
+
+**``transform``** and **``filter``** are now methods of **``combinable``**:
+
+.code -numbers 04-transform-filter/main.go /func transform/,/^\)/
+->
+
+.code -numbers 05-combine-attempt-1/main.go /^func.*transform\(/,/^\)/
+
+## Simplifying chaining code - first attempt - result
+
+.code -numbers 05-combine-attempt-1/main.go /^func main/,/^}/
+
+Jay: Nice looking code - can easily understand and extend
+
+: Straightforward code, easy to understand - operations follow natural reading order
+: Can easily add new step into the chain - e.g. filter out second value
+
+Nay: Can not change type of sequence element
+
+: Since transform and filter are functions over `combinable` those can not be generics
+: which means that it's not easy to return sequence of type different that the input one
+
+Nay: Limited extendability of the **`combinable`** type - all its methods must be in the same package.
+
+: if such combinable is in stdlib (or it's part of the Seq type), it can not be extended
+: in 3rd party code, libraries would have to declare their own type proxies that could lead
+: to incompatibilities between libraries etc.
+
+## Simplifying chaining code - second attempt
+
+Add a concept of **`converter`** function:
+
+.code -numbers 06-combine-attempt-2/main.go /^type converter/
+
+**`transform`** and **`filter`** would need one more indirection layer:
+
+.code -numbers 06-combine-attempt-2/main.go /^func transform/,/^}/
+
+This is getting out of control 🤯 but let's see where this leads us...
+
+## Simplifying chaining code 2 - combining converters
+
+Go does not have generic variadic functions, we have to workaround:
+
+.code -numbers 06-combine-attempt-2/main.go /COMBINE START/,/COMBINE END/
+
+## Simplifying chaining code 2 - the result
+
+.code -numbers 06-combine-attempt-2/main.go /^func main/,/^}/
+
+Ok-ish...
+
+Code is straightforward, easy to read, easy to extend.
+
+Lost some type deduction abilities (`square` now needs explicit `int`).
+
+Is it worth the effort?
+
+## Simplifying chaining code - birds eye view
+
+It's all about golang's syntax - how to attach new code at the end of the existing one.
+
+`method2( method1(), ...)`
+
+I could find those methods in Go:
+
+* method call (`.method1().method2()....`) - which does not support generics
+* `combine`-like functions - which can be either variadic or generic but not both
+* ... or
+
+## Simplifying chaining code - simplicity FTW
+
+ ... or use intermediate variables:
+
+```go
+method2( method1(), ...)
+```
+
+becomes:
+
+```go
+result1 := method1()
+result2 := method2(result1, ...)
+```
+
+> *I'm not the first one to end up with similar issues and solutions: <https://github.com/golang/go/issues/33361>*
+
+## Simplifying chaining code - variable-based method
+
+.code -numbers 04-transform-filter/main.go /^func main/,/^}/
+
+becomes:
+
+.code -numbers 07-split-lines/main.go /^func main/,/^}/
+
+## Useful links
+
+Rangefunc wiki:
+
+> <https://go.dev/wiki/RangefuncExperiment>
+
+Rejected pipe operator proposal:
+
+> <https://github.com/golang/go/issues/33361>
+
+Proposal for generic methods:
+
+> <https://github.com/golang/go/issues/49085>
+
+Rangefunc code rewriting:
+
+> <https://github.com/golang/go/blob/go1.22.0/src/cmd/compile/internal/rangefunc/rewrite.go>
