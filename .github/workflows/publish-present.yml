@@ -1,0 +1,57 @@
+name: Publish Go Presentation to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # Set up Go environment
+    - name: Set up Go
+      uses: actions/setup-go@v2
+
+    # Install present tool
+    - name: Install present tool
+      run: go install golang.org/x/tools/cmd/present@latest
+
+    # Generate static HTML
+    - name: Generate HTML from presentation
+      run: |
+        $(go env GOPATH)/bin/present -notes &
+        sleep 1
+        rm -rf output
+        mkdir -p output
+        curl -s http://localhost:3999/meetup-presentation.slide > output/index.html
+        for file in \
+            play.js \
+            static/slides.js \
+            static/notes.js \
+            static/styles.css \
+            qr/merged.svg \
+        ; do
+            mkdir -p "$(dirname "output/${file}")"
+            curl -s "http://localhost:3999/${file}" > "output/${file}"
+        done
+        find ./output -ls
+        pkill present
+
+    # Deploy to github pages
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+          path: 'output'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
