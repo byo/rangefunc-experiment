@@ -320,3 +320,7 @@ Proposal for generic methods:
 Rangefunc code rewriting:
 
 > <https://github.com/golang/go/blob/go1.22.0/src/cmd/compile/internal/rangefunc/rewrite.go>
+
+## QR codes
+
+.image qr/merged.svg 500 _
