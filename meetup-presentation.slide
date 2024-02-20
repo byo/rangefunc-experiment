@@ -303,6 +303,64 @@ becomes:
 
 .code -numbers 07-split-lines/main.go /^func main/,/^}/
 
+## Practical examples - Split input into lines
+
+.code -numbers 08-example-lines/main.go /^func splitLines/,
+
+## Practical examples - DB queries
+
+```go
+func scanDB(db *DB) error {
+    for row, err := db.Query[RowType](`
+        SELECT *
+        FROM meetup_topics
+        WHERE location='Wroclaw'
+    `) {
+        if err != nil {
+            return fmt.Errorf("Failed to read data: %w", err)
+        }
+
+        processData(row)
+    }
+}
+```
+
+## Practical examples - event loops
+
+```go
+func reactor() {
+    for event := events_stream() {
+        if event.Type == "EXIT" {
+            break
+        }
+        processEvent(event)
+    }
+}
+```
+
+## Practical examples - network streams
+
+```go
+func handleConnection(conn *Connection) {
+    for msg, stop := conn.Messages() {
+        if stop {
+            break
+        }
+        processMessage(msg)
+    }
+}
+```
+
+## Practical examples - resource handling
+
+.code -numbers 09-resource-handling/main.go /^func open/,
+
+*generator function can properly cleanup resources once those are used*
+
+: current example only yields a single file value, but it could yield
+: more, after each iteration it has a chance to properly cleanup such
+: resources taking off the burden from the caller
+
 ## Useful links
 
 Rangefunc wiki:
