@@ -15,9 +15,9 @@ func open(fname string) iter.Seq[io.Reader] {
 			return
 		}
 
-		yield(fl)
+		yield(fl) // Yield a single file only
 
-		fl.Close()
+		fl.Close() // And cleanup after it was used
 	}
 }
 

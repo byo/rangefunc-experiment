@@ -303,6 +303,8 @@ becomes:
 
 .code -numbers 07-split-lines/main.go /^func main/,/^}/
 
+## Practical examples
+
 ## Practical examples - Split input into lines
 
 .code -numbers 08-example-lines/main.go /^func splitLines/,
@@ -311,7 +313,7 @@ becomes:
 
 ```go
 func scanDB(db *DB) error {
-    for row, err := db.Query[RowType](`
+    for row, err := range db.Query[RowType](`
         SELECT *
         FROM meetup_topics
         WHERE location='Wroclaw'
@@ -329,7 +331,7 @@ func scanDB(db *DB) error {
 
 ```go
 func reactor() {
-    for event := events_stream() {
+    for event := range events_stream() {
         if event.Type == "EXIT" {
             break
         }
@@ -342,7 +344,7 @@ func reactor() {
 
 ```go
 func handleConnection(conn *Connection) {
-    for msg, stop := conn.Messages() {
+    for msg, stop := range conn.Messages() {
         if stop {
             break
         }
@@ -355,7 +357,7 @@ func handleConnection(conn *Connection) {
 
 .code -numbers 09-resource-handling/main.go /^func open/,
 
-*generator function can properly cleanup resources once those are used*
+*generator function can properly cleanup resources once those are no longer needed*
 
 : current example only yields a single file value, but it could yield
 : more, after each iteration it has a chance to properly cleanup such
